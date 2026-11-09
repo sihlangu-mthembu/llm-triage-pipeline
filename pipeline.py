@@ -5,6 +5,7 @@ A backend is any object with  .name  and  .attempt(doc, attempt_number) -> str  
 
 import json
 import re
+from typing import Any, Protocol
 
 TOPICS = ["economy", "health", "education", "energy", "crime_safety", "governance"]
 MAX_SUMMARY_WORDS = 30
@@ -19,12 +20,20 @@ PROMPT = (
 REFUSAL_PATTERNS = [r"\bi'?m sorry\b", r"\bi can'?t help\b", r"\bi cannot (?:help|assist)\b", r"\bunable to assist\b"]
 
 
-def looks_like_refusal(raw):
+class Backend(Protocol):
+    """Anything with a name and an attempt() method can drive the pipeline."""
+
+    name: str
+
+    def attempt(self, doc: dict[str, str], attempt_number: int) -> str: ...
+
+
+def looks_like_refusal(raw: str) -> bool:
     lowered = raw.lower()
     return any(re.search(p, lowered) for p in REFUSAL_PATTERNS)
 
 
-def validate(raw):
+def validate(raw: str) -> tuple[dict[str, Any] | None, str | None]:
     """Return (parsed_output, None) if valid, else (None, error_code)."""
     if looks_like_refusal(raw):
         return None, "refusal"
@@ -48,9 +57,9 @@ def validate(raw):
     return data, None
 
 
-def process(doc, backend):
+def process(doc: dict[str, str], backend: Backend) -> dict[str, Any]:
     """Run one document through the backend with retries. Returns a result record."""
-    errors = []
+    errors: list[str] = []
     for attempt in range(1, MAX_ATTEMPTS + 1):
         raw = backend.attempt(doc, attempt)
         data, error = validate(raw)
@@ -58,7 +67,7 @@ def process(doc, backend):
             status = "ok" if attempt == 1 else "ok_after_retry"
             return {"doc_id": doc["doc_id"], "backend": backend.name, "status": status, "attempts": attempt,
                     "errors": errors, "output": data, "correct": data["topic"] == doc["gold_topic"]}
-        errors.append(error)
+        errors.append(error or "invalid")
     status = "refused" if errors and all(e == "refusal" for e in errors) else "failed"
     return {"doc_id": doc["doc_id"], "backend": backend.name, "status": status, "attempts": MAX_ATTEMPTS,
             "errors": errors, "output": None, "correct": False}

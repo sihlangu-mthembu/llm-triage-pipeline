@@ -13,23 +13,24 @@ import datetime
 import json
 import pathlib
 from collections import Counter
+from typing import Any
 
 from backends import KeywordBackend, ReplayBackend
-from pipeline import TOPICS, process
+from pipeline import TOPICS, Backend, process
 
 ROOT = pathlib.Path(__file__).resolve().parent
 
 
-def load_docs():
+def load_docs() -> list[dict[str, Any]]:
     with open(ROOT / "data" / "documents.jsonl", encoding="utf-8") as fh:
         return [json.loads(line) for line in fh]
 
 
-def _acc(rows):
+def _acc(rows: list[dict[str, Any]]) -> float | None:
     return sum(r["correct"] for r in rows) / len(rows) if rows else None
 
 
-def summarise(results):
+def summarise(results: list[dict[str, Any]]) -> dict[str, Any]:
     n = len(results)
     status = Counter(r["status"] for r in results)
     return {
@@ -46,7 +47,7 @@ def summarise(results):
     }
 
 
-def build_report(docs, runs):
+def build_report(docs: list[dict[str, Any]], runs: dict[str, Any]) -> str:
     by_id = {d["doc_id"]: d for d in docs}
     lines = ["# LLM triage pipeline report", "",
              f"{len(docs)} documents, {len(TOPICS)} topics. Generated {datetime.datetime.now():%Y-%m-%d %H:%M}.", "",
@@ -97,11 +98,11 @@ def build_report(docs, runs):
     return "\n".join(lines)
 
 
-def main():
+def main() -> None:
     docs = load_docs()
     rec = ROOT / "recorded" / "claude_2026-11-04.jsonl"
-    backends = [ReplayBackend(rec), ReplayBackend(rec, ROOT / "recorded" / "fault_injection.jsonl"), KeywordBackend()]
-    runs = {}
+    backends: list[Backend] = [ReplayBackend(rec), ReplayBackend(rec, ROOT / "recorded" / "fault_injection.jsonl"), KeywordBackend()]
+    runs: dict[str, list[dict[str, Any]]] = {}
     (ROOT / "logs").mkdir(exist_ok=True)
     with open(ROOT / "logs" / "run_log.jsonl", "w", encoding="utf-8") as log:
         for backend in backends:

@@ -2,6 +2,7 @@
 
 import json
 import re
+from pathlib import Path
 
 from pipeline import TOPICS
 
@@ -9,7 +10,7 @@ from pipeline import TOPICS
 class ReplayBackend:
     """Replays recorded LLM outputs. Optional fault injection serves hand-written bad attempts first."""
 
-    def __init__(self, recorded_path, fault_path=None):
+    def __init__(self, recorded_path: Path, fault_path: Path | None = None) -> None:
         self.recorded = {}
         with open(recorded_path, encoding="utf-8") as fh:
             for line in fh:
@@ -25,7 +26,7 @@ class ReplayBackend:
         suffix = " + fault injection" if fault_path else ""
         self.name = f"{self.model}{suffix}"
 
-    def attempt(self, doc, attempt_number):
+    def attempt(self, doc: dict[str, str], attempt_number: int) -> str:
         bad = self.faults.get(doc["doc_id"], [])
         if attempt_number <= len(bad):
             return bad[attempt_number - 1]
@@ -47,7 +48,7 @@ class KeywordBackend:
 
     name = "keyword baseline"
 
-    def attempt(self, doc, attempt_number):
+    def attempt(self, doc: dict[str, str], attempt_number: int) -> str:
         text = doc["text"].lower()
         scores = {t: sum(text.count(k) for k in words) for t, words in KEYWORDS.items()}
         topic = max(TOPICS, key=lambda t: scores[t])

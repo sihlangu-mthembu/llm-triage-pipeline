@@ -112,7 +112,7 @@ FAULTS = [
 ]
 
 
-def main():
+def main() -> None:
     with open(ROOT / "data" / "documents.jsonl", "w", encoding="utf-8") as fh:
         for split, rows in (("dev", DOCS), ("heldout", HELDOUT)):
             for doc_id, topic, text in rows:
