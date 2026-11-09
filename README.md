@@ -1,5 +1,7 @@
 # llm-triage-pipeline
 
+![tests](https://github.com/sihlangu-mthembu/llm-triage-pipeline/actions/workflows/tests.yml/badge.svg)
+
 A small Python pipeline that uses an LLM to **classify, extract entities from and summarise** a batch of documents, and that is built around the ways LLM pipelines fail silently: malformed JSON, missing fields, invented categories, over-long outputs and refusals of legitimate requests.
 
 Every output is validated against a schema. Bad outputs are retried up to three times, and every error and refusal is logged. Accuracy is measured against hand-assigned labels and compared with a simple keyword baseline.
